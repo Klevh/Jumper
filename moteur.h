@@ -38,8 +38,10 @@ void endGame(ElementSDL2 * this, SDL_Keycode c);
 /* -------------------- */
 
 /* --- menu --- */
-/* message quand on clique sur le bouton jouer */
+/* interaction du bouton jouer */
 void play(ElementSDL2 * this);
+/* interaction du bouton quitter */
+void quit(ElementSDL2 * this);
 /* ------------ */
 
 #endif

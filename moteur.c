@@ -41,7 +41,6 @@ void gravite(ElementSDL2 *this){
     setKeyPressElementSDL2(this,NULL);
     setKeyReleasedElementSDL2(this,NULL);
     courant=createTexte(50.f,225.f,300.f,150.f,"arial.ttf","GAME OVER",blanc,1,0);
-    printf("%p\n",courant);
     addElementToElementSDL2(courant,this);
     setKeyPressElementSDL2(courant,endGame);
     dpy = -SPEED_MAX;
@@ -269,4 +268,8 @@ void play(ElementSDL2 * this){
   }else{
     printf("Erreur dans play\n");
   }
+}
+
+void quit(ElementSDL2 * this){
+  *((int*)(getDataElementSDL2(this)))=0;
 }
