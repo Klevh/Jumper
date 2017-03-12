@@ -11,7 +11,7 @@ int main(){
   /* variables lies a l'affichage graphique */
   ElementSDL2     * personnage;
   ElementSDL2     * score;
-  ElementSDL2     * obstacle;
+  ElementSDL2     * button;
   SDL_Event         event;
   /* autres variables */
   int               blanc[4] = {255,255,255,0};
@@ -20,8 +20,6 @@ int main(){
   int               noir[4] = {0,0,0,0};
   int               run = 1;
   int               tps = 0, ticks = 0;
-  int             * i;
-  Data            * pdata;
   int               height = 0;
 
   /* initialisation de la SDL2 */
@@ -40,33 +38,33 @@ int main(){
 
   /* initialisation de la seed aleatoire */
   srand(time(0));
-  
+
+  /* --- phase de jeu --- */
   /* cadre supperieur du jeu */
   createBlock(0.f,0.f,400.f,40.f,noir,1,0);
   /* texte du score */
   score = createTexte(5.f,5.f,160.f,30.f,"arial.ttf","Score : 0",blanc,1,0);
   setActionElementSDL2(score,actualiseScore);
   /* personnage */
-  pdata=malloc(sizeof(*pdata));
-  pdata->score=0;
-  pdata->left=0;
-  pdata->right=0;
   personnage = createImage(180.f,510.f,40.f,40.f,"pixel.png",1,1);
-  setActionElementSDL2(personnage,gravite);
-  setKeyPressElementSDL2(personnage,deplacement);
-  setKeyReleasedElementSDL2(personnage,stop);
   addHitBoxElementSDL2(personnage,rectangleHitBox(0.f,0.f,1.f,1.f),0);
-  setOnClickElementSDL2(personnage,touch);
-  setDataElementSDL2(personnage,pdata);
+  setDataElementSDL2(personnage,malloc(sizeof(Data)));
   addElementToElementSDL2(score,personnage);
 
-  /* generation des premiers obstacles */
-  i=malloc(sizeof(*i));
-  *i=0;
-  obstacle = createBlock(175.f,550.f,WIDTH_OBSTACLE,HEIGHT_OBSTACLE,noir,1,2);
-  setDataElementSDL2(obstacle,i);
-  addElementToElementSDL2(personnage,obstacle);
-  initObstacle(personnage,noir);
+  /* --- menu principal --- */
+  /* titre */
+  createTexte(100.f,30.f,200.f,50.f,"arial.ttf","JUMPER",noir,0,0);
+  createImage(50.f,30.f,50.f,50.f,"pixel.png",0,0);
+  createImage(300.f,30.f,50.f,50.f,"pixel.png",0,0);
+
+  /* boutons */
+  button=createButton(125.f,150.f,150.f,80.f,80.f,"arial.ttf","Jouer",blanc,noir,0,0);
+  //button=createBlock(125.f,150.f,150.f,80.f,noir,0,0);
+  addHitBoxElementSDL2(button,rectangleHitBox(0.f,0.f,1.f,1.f),0);
+  addElementToElementSDL2(button,personnage);
+  setOnClickElementSDL2(button,play);
+
+  initGame(personnage,noir);
   
   /* display de la fenetre */
   while(run){
@@ -102,14 +100,8 @@ int main(){
     if(ticks>0){
       SDL_Delay(ticks);
     }
-
-    getDimensionFenetreSDL2(NULL,&height);
-    if(personnage->y > height){
-      run = 0;
-    }
   }
 
-  printf("Vous avez perdu. Votre score est de %d.\n",((Data *)(personnage->data))->score);
   closeAllFenetreSDL2();
   closeAllSDL2();
 

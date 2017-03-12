@@ -146,44 +146,6 @@ void removeListPtrElementSDL2(ListDCElementSDL2* l,ListPtrElementSDL2 *lp){
     }
   }
 }
-
-void removeDCElementSDL2(ListDCElementSDL2** l,ElementSDL2 *e){
-  ListDCElementSDL2 *ltmp;
-  ListPtrElementSDL2 **lp, *ptmp;
-  PtrElementSDL2 **pe, *etmp, **pte;
-  
-  if(e && l){
-    while(*l){
-      lp=&((*l)->first);
-      while(*lp){
-	pte=NULL;
-	pe=&((*lp)->first);
-	while(*pe){
-	  if((*pe)->element==e){
-	    if(*pe==(*lp)->last){
-	      if(pte){
-		(*lp)->last=*pte;
-	      }else{
-		(*lp)->last=NULL;
-	      }
-	    }
-	    if(*pe==(*lp)->current){
-	      (*lp)->current=(*pe)->next;
-	    }
-	    etmp=(*pe)->next;
-	    free(*pe);
-	    *pe=etmp;
-	  }else{
-	    pte=pe;
-	    pe=&((*pe)->next);
-	  }
-	}
-	lp=&((*lp)->next);
-      }
-      l=&((*l)->next);
-    }
-  }
-}
 /* ------------------------------------------------------- */
 
 
@@ -263,61 +225,53 @@ int addElementSDL2(ElementSDL2* e){
   return error;
 }
 
-void cleanElementSDL2(){
-  FenetreSDL2 *curr;
-  PtrElementSDL2 **e, *etmp;
-  ListPtrElementSDL2 **lp, *ptmp;
-  ListDCElementSDL2 **ldc, *dctmp;
-  ElementSDL2 *ee;
+int removeElementSDL2(ElementSDL2* e){
+  DisplayCode ** d, *tmp;
+  ListPtrElementSDL2 ** lp, *ptmp;
+  ListDCElementSDL2 ** ldc, *dctmp;
+  int error;
   
-  if(_windows_SDL2TK){
-    curr = _windows_SDL2TK->first;
-    while(curr){
-      ldc=&(curr->liste->first);
-      while(*ldc){
+  if(_windows_SDL2TK && _windows_SDL2TK->current && _windows_SDL2TK->current->liste && e && e->codes){
+    error = 0;
+    d=&(e->codes->first);
+    ldc=&(_windows_SDL2TK->current->liste->first);
+    while(*d && *ldc){
+      while(*ldc && (*ldc)->code<(*d)->code){
+	ldc=&((*ldc)->next);
+      }
+      if(*ldc && (*ldc)->code==(*d)->code){
 	lp=&((*ldc)->first);
-	while(*lp){
-	  e=&((*lp)->first);
-	  while(*e){
-	    if((*e)->element->delete){
-	      ee=(*e)->element;
-	      removeDCElementSDL2(ldc,ee);
-	      freeElementSDL2(ee);
-	    }else{
-	      e=&((*e)->next);
-	    }
+	while(*lp && (*lp)->code > (*d)->plan){
+	  lp=&((*lp)->next);
+	}
+	if(*lp && (*lp)->code == (*d)->plan){
+	  removePtrElementSDL2(*lp,e);
+	  tmp=*d;
+	  *d=(*d)->next;
+	  free(tmp);
+	  if(!e->codes || !e->codes->first){
+	    freeElementSDL2(e);
+	    *d=NULL;
 	  }
 	  if(!(*lp)->first){
-	    ptmp=(*lp)->next;
-	    if(*lp == curr->liste->currentPIterator){
-	      curr->liste->currentPIterator = ptmp;
-	    }
-	    free(*lp);
-	    *lp=ptmp;
-	  }else{
-	    lp=&((*lp)->next);
+	    ptmp=*lp;
+	    *lp=(*lp)->next;
+	    free(ptmp);
 	  }
-	}
-	if(!(*ldc)->first){
-	  dctmp=(*ldc)->next;
-	  if(*ldc == curr->liste->currentDCIterator){
-	    curr->liste->currentDCIterator = dctmp;
+	  if(!(*ldc)->first){
+	    dctmp=*ldc;
+	    *ldc=(*ldc)->next;
+	    free(dctmp);
 	  }
-	  free(*ldc);
-	  *ldc=dctmp;
-	}else{
-	  ldc=&((*ldc)->next);
 	}
       }
-      curr=curr->next;
+      if(*d){
+	d=&((*d)->next);
+      }
     }
   }
-}
 
-void removeElementSDL2(ElementSDL2 *e){
-  if(e){
-    e->delete=1;
-  }
+  return error;
 }
 /* ------------------------------------------------------- */
 
@@ -357,7 +311,6 @@ ElementSDL2* createBlock(float x,float y,float width,float height,int couleur[4]
   if(_windows_SDL2TK && _windows_SDL2TK->current){
     e=malloc(sizeof(*e));
     if(e){
-      e->delete=0;
       e->x=x;
       e->y=y;
       e->width=width;
@@ -380,10 +333,7 @@ ElementSDL2* createBlock(float x,float y,float width,float height,int couleur[4]
       e->image=NULL;
       e->hitboxes = initListHitBox();
       e->data=NULL;
-      if(addElementSDL2(e)){
-	freeElementSDL2(e);
-	e=NULL;
-      }
+      addElementSDL2(e);
     }
   }
 
@@ -397,7 +347,6 @@ ElementSDL2* createTexte(float x,float y,float width,float height,char * font,ch
   if(_windows_SDL2TK && _windows_SDL2TK->current){
     e=malloc(sizeof(*e));
     if(e){
-      e->delete=0;
       e->x=x;
       e->y=y;
       e->width=width;
@@ -424,10 +373,7 @@ ElementSDL2* createTexte(float x,float y,float width,float height,char * font,ch
 	e->keyPress=NULL;
 	e->keyReleased=NULL;
 	e->data=NULL;
-	if(addElementSDL2(e)){
-	  freeElementSDL2(e);
-	  e=NULL;
-	}
+	addElementSDL2(e);
       }else{
 	freeElementSDL2(e);
 	e=NULL;
@@ -448,7 +394,6 @@ ElementSDL2* createImage(float x,float y,float width,float height,char *image,in
     if(s){
       e=malloc(sizeof(*e));
       if(e){
-	e->delete=0;
 	e->x=x;
 	e->y=y;
 	e->width=width;
@@ -471,10 +416,7 @@ ElementSDL2* createImage(float x,float y,float width,float height,char *image,in
 	e->interactions=NULL;
 	e->hitboxes = initListHitBox();
 	e->data=NULL;
-	if(addElementSDL2(e)){
-	  freeElementSDL2(e);
-	  e=NULL;
-	}
+	addElementSDL2(e);
       }
       SDL_FreeSurface(s);
     }
@@ -609,7 +551,7 @@ int isDisplaied(ElementSDL2 *e){
   DisplayCode *d;
   int resultat = 0;
 
-  if(e && !(e->delete) && _windows_SDL2TK && _windows_SDL2TK->current){
+  if(e && _windows_SDL2TK && _windows_SDL2TK->current){
     d=e->codes->first;
     while(d && d->code<_windows_SDL2TK->current->displayCode){
       d=d->next;
@@ -1031,38 +973,26 @@ void addElementToElementSDL2(ElementSDL2 *e,ElementSDL2 *add){
       e->interactions->last=pe;
       e->interactions->current=pe;
     }else{
-      if(!e->interactions->first){
-	e->interactions->first=pe;
-	e->interactions->current=pe;
-      }else{
-	e->interactions->last->next=pe;
-      }
+      e->interactions->last->next=pe;
       e->interactions->last=pe;
     }
   }
 }
 
 void delElementToElementSDL2(ElementSDL2 *e,ElementSDL2 *del){
-  PtrElementSDL2 **pe, **tmp = NULL, *rm, *rmtmp;
+  PtrElementSDL2 **pe, *tmp;
 
-  if(e && e->interactions && del){
+  if(e && del){
     pe=&(e->interactions->first);
 
-    while(*pe && (*pe)->element!=del){
-      tmp=pe;
+    while(*pe!=e->interactions->last && (*pe)->element!=del){
       pe=&((*pe)->next);
     }
 
     if(*pe && (*pe)->element==del){
-      rm=*pe;
+      tmp=*pe;
       *pe=(*pe)->next;
-      free(rm);
-      if(rm == e->interactions->current){
-	e->interactions->current=*pe;
-      }
-      if(rm == e->interactions->last){
-	e->interactions->last=*pe;
-      }
+      free(tmp);
     }
   }   
 }
@@ -1152,7 +1082,6 @@ int initIterateur(int displayCode){
     if(_windows_SDL2TK->current->liste->currentDCIterator && _windows_SDL2TK->current->liste->currentDCIterator->code == displayCode){
       _windows_SDL2TK->current->liste->currentPIterator=_windows_SDL2TK->current->liste->currentDCIterator->first;
       _windows_SDL2TK->current->liste->currentPIterator->current=_windows_SDL2TK->current->liste->currentPIterator->first;
-      succes=1;
     }else{
       if(_windows_SDL2TK->current->liste->currentDCIterator && _windows_SDL2TK->current->liste->currentDCIterator->code < displayCode){
 	lp=_windows_SDL2TK->current->liste->currentDCIterator;
@@ -1178,7 +1107,7 @@ ElementSDL2* nextElementSDL2(){
   ListPtrElementSDL2 *lp;
   ElementSDL2 *res = NULL;
   PtrElementSDL2 *pres;
-
+  
   if(_windows_SDL2TK && _windows_SDL2TK->current && _windows_SDL2TK->current->liste && _windows_SDL2TK->current->liste->currentDCIterator){
     if(_windows_SDL2TK->current->liste->currentPIterator){
       pres=_windows_SDL2TK->current->liste->currentPIterator->current;
