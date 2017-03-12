@@ -5,12 +5,14 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 #include <SDL2/SDL_image.h>
-#include "moteur.h"
+#include "SANDAL2/SANDAL2.h"
+
+#include "menu.h"
 
 int main(){
   /* variables lies a l'affichage graphique */
   ElementSDL2     * personnage;
-  ElementSDL2     * score;
+  ElementSDL2     * scor;
   ElementSDL2     * button;
   SDL_Event         event;
   /* autres variables */
@@ -43,13 +45,13 @@ int main(){
   /* cadre supperieur du jeu */
   createBlock(0.f,0.f,400.f,40.f,noir,1,0);
   /* texte du score */
-  score = createTexte(5.f,5.f,160.f,30.f,"arial.ttf","Score : 0",blanc,1,0);
-  setActionElementSDL2(score,actualiseScore);
+  scor = createTexte(5.f,5.f,160.f,30.f,"arial.ttf","Score : 0",blanc,1,0);
+  setActionElementSDL2(scor,actualiseScore);
   /* personnage */
   personnage = createImage(180.f,510.f,40.f,40.f,"pixel.png",1,1);
   addHitBoxElementSDL2(personnage,rectangleHitBox(0.f,0.f,1.f,1.f),0);
   setDataElementSDL2(personnage,malloc(sizeof(Data)));
-  addElementToElementSDL2(score,personnage);
+  addElementToElementSDL2(scor,personnage);
 
   /* --- menu principal --- */
   /* titre */
@@ -63,6 +65,16 @@ int main(){
   addElementToElementSDL2(button,personnage);
   setOnClickElementSDL2(button,play);
 
+  /* bouton scores */
+  button=createButton(125.f,250.f,150.f,80.f,80.f,"arial.ttf","Scores",blanc,noir,0,0);
+  addHitBoxElementSDL2(button,rectangleHitBox(0.f,0.f,1.f,1.f),0);
+  setOnClickElementSDL2(button,score);
+  
+  /* bouton configuration */
+  button=createButton(125.f,350.f,150.f,80.f,80.f,"arial.ttf","Reglage",blanc,noir,0,0);
+  addHitBoxElementSDL2(button,rectangleHitBox(0.f,0.f,1.f,1.f),0);
+  setOnClickElementSDL2(button,config);
+  
   /* bouton quitter */
   button=createButton(250.f,500.f,100.f,50.f,80.f,"arial.ttf","Quitter",blanc,noir,0,0);
   addHitBoxElementSDL2(button,rectangleHitBox(0.f,0.f,1.f,1.f),0);

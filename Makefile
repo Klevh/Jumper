@@ -5,7 +5,7 @@ SDL2TK = SANDAL2/ElementSDL2.o SANDAL2/FenetreSDL2.o SANDAL2/DisplayCode.o SANDA
 OFLAG= -lSDL2 -lSDL2_ttf -lSDL2_image -lSDL2_ttf -g -lm
 CFLAG=
 
-OFILE=main.o moteur.o $(SDL2TK)
+OFILE=main.o jeu.o menu.o $(SDL2TK)
 PROG=jumper
 
 $(PROG): $(OFILE)
