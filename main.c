@@ -18,11 +18,15 @@ int main(){
   /* autres variables */
   int               blanc[4] = {255,255,255,0};
   int               gris[4] = {127,127,127,0};
-  int               vert[4] = {0,150,0,0};
   int               noir[4] = {0,0,0,0};
+  int               bleu[4] = {0,0,255,0};
+  int               vert[4] = {0,255,0,0};
+  int               rouge[4] = {255,0,0,0};
   int             * run = malloc(sizeof(*run));
   int               tps = 0, ticks = 0;
   int               dp = 0;
+  int               x,y,w;
+  int             * compteur = NULL;
 
   /* initialisation de la SDL2 */
   if(initAllSDL2(IMG_INIT_PNG)){
@@ -30,9 +34,10 @@ int main(){
     exit(-1);
   }
 
-  /* initialisation de la fenetre */
-  initFenetreSDL2(400,600,"Jumper",SDL_WINDOW_RESIZABLE,gris,0);
-  if(initIteratorFenetreSDL2()){
+  /* initialisation des fenetres */
+  initWindowSDL2(400,600,"Jumper",SDL_WINDOW_RESIZABLE,gris,0);
+  initWindowSDL2(300,110,"Jumper - Count",0,gris,0);
+  if(initIteratorWindowSDL2()){
     closeAllSDL2();
     fprintf(stderr,"Erreur d'ouverture de la fenetre.\n");
     exit(-1);
@@ -82,7 +87,54 @@ int main(){
   setDataElementSDL2(button,run);
   *run = 1;
 
+  /* --- deuxieme fenetre --- */
+  getDimensionWindowSDL2(&w,NULL);
+  getCoordWindowSDL2(&x,&y);
+  if(!nextWindowSDL2()){
+    setCoordWindowSDL2(x+w+6,y);
+    /* differents blocks */
+    button=createBlock(20.f,20.f,50.f,15.f,noir,0,0);
+    createBlock(90.f,20.f,50.f,15.f,bleu,0,0);
+    createBlock(160.f,20.f,50.f,15.f,rouge,0,0);
+    createBlock(230.f,20.f,50.f,15.f,vert,0,0);
+    compteur=malloc(4*sizeof(*compteur));
+    for(dp=0;dp<4;++dp){
+      compteur[dp]=0;
+    }
+    dp=0;
+    setDataElementSDL2(button,compteur);
+    addElementToElementSDL2(personnage,button);
+
+    /* textes associees */
+    scor=createTexte(40.f,45.f,60.f,45.f,"arial.ttf","0     ",blanc,0,0);
+    compteur=malloc(sizeof(*compteur));
+    *compteur=0;
+    setDataElementSDL2(scor,compteur);
+    addElementToElementSDL2(scor,button);
+    setActionElementSDL2(scor,actualiseCompteur);
+    scor=createTexte(110.f,45.f,60.f,45.f,"arial.ttf","0     ",blanc,0,0);
+    compteur=malloc(sizeof(*compteur));
+    *compteur=1;
+    setDataElementSDL2(scor,compteur);
+    addElementToElementSDL2(scor,button);
+    setActionElementSDL2(scor,actualiseCompteur);
+    scor=createTexte(180.f,45.f,60.f,45.f,"arial.ttf","0     ",blanc,0,0);
+    compteur=malloc(sizeof(*compteur));
+    *compteur=2;
+    setDataElementSDL2(scor,compteur);
+    addElementToElementSDL2(scor,button);
+    setActionElementSDL2(scor,actualiseCompteur);
+    scor=createTexte(250.f,45.f,60.f,45.f,"arial.ttf","0     ",blanc,0,0);
+    compteur=malloc(sizeof(*compteur));
+    *compteur=3;
+    setDataElementSDL2(scor,compteur);
+    addElementToElementSDL2(scor,button);
+    setActionElementSDL2(scor,actualiseCompteur);
+  }
+
   /* display de la fenetre */
+  initIteratorWindowSDL2();
+  tps=0;
   while(*run){
     tps = SDL_GetTicks();
     /* gestion d'evenement */
@@ -93,29 +145,30 @@ int main(){
 	  *run = 0;
 	}
 	break;
-      case SDL_QUIT :   
+      case SDL_QUIT :
 	*run = 0;
+	break;
       case SDL_KEYUP:
-	keyReleasedFenetreSDL2(event.key.keysym.sym);
+	keyReleasedWindowSDL2(event.key.keysym.sym);
 	break;
       case SDL_KEYDOWN:
-	getDisplayCodeFenetreSDL2(&dp);
+	getDisplayCodeWindowSDL2(&dp);
 	if(!dp && event.key.keysym.sym==SDLK_ESCAPE){
 	  *run=0;
 	}else{
-	  keyPressedFenetreSDL2(event.key.keysym.sym);
+	  keyPressedWindowSDL2(event.key.keysym.sym);
 	}
 	break;
       case SDL_MOUSEBUTTONDOWN:
-	clickFenetreSDL2(event.button.x,event.button.y);
+	clickWindowSDL2(event.button.x,event.button.y);
 	break;
       }
     }
 
     /* update de la fenetre */
-    updateFenetreSDL2();
+    updateAllWindowSDL2();
     /* affichage de la fenetre */
-    displayFenetreSDL2();
+    displayAllWindowSDL2();
     /* delai pour 60 frames/secondes */
     ticks = 16 - SDL_GetTicks() + tps;
     if(ticks>0){
@@ -123,7 +176,7 @@ int main(){
     }
   }
 
-  closeAllFenetreSDL2();
+  closeAllWindowSDL2();
   closeAllSDL2();
 
   return 0;

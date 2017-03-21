@@ -1,10 +1,11 @@
 #ifndef _FONTSDL2_SDL2TK_KLEVH_
 #define _FONTSDL2_SDL2TK_KLEVH_
 
-#include "FenetreSDL2.h"
+#include "WindowSDL2.h"
 
 /**
  * @file FontSDL2.h
+ * @author Baptiste PRUNIER (KLEVH)
  * @brief Information about TTF objects
  */
 
@@ -12,7 +13,7 @@
  * @brief List of the windows
  *   WARNING : do not touch it ... trust me
  */
-extern ListFenetreSDL2 * _windows_SDL2TK;
+extern ListWindowSDL2 * _windows_SDL2TK;
 
 /**
  * @struct FontSDL2
@@ -20,13 +21,13 @@ extern ListFenetreSDL2 * _windows_SDL2TK;
  */
 typedef struct{
   TTF_Font *font;
-  ///< SDL font object
+  /**< SDL font object*/
   char *text;
-  ///< text
+  /**< text*/
   SDL_Color color;
-  ///< color of the text
+  /**< color of the text*/
   SDL_Texture *texture;
-  ///< SDL texture
+  /**< SDL texture*/
 }FontSDL2;
 
 /* -------------------------------------------------------

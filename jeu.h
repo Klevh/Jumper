@@ -40,4 +40,7 @@ void actualiseScore(ElementSDL2 * this);
 /* permet au joueur de relancer le jeu ou de revenir au menu quand defaite */
 void endGame(ElementSDL2 * this, SDL_Keycode c);
 
+/* actualise le compteur si besoin est */
+void actualiseCompteur(ElementSDL2 *this);
+
 #endif

@@ -3,11 +3,13 @@
 
 #include "HitBox.h"
 #include "FontSDL2.h"
-#include "FenetreSDL2.h"
+#include "WindowSDL2.h"
 #include "DisplayCode.h"
+#include "Sprite.h"
 
 /**
  * @file ElementSDL2.h
+ * @author Baptiste PRUNIER (KLEVH)
  * @brief Contains all structures related to Elements
  */
 
@@ -15,7 +17,7 @@
  * @brief List of windows
  *   WARNING : Do not touch this list ... trust me
  */
-extern ListFenetreSDL2 * _windows_SDL2TK;
+extern ListWindowSDL2 * _windows_SDL2TK;
 
 /**
  * @struct EntrySDL2
@@ -23,16 +25,15 @@ extern ListFenetreSDL2 * _windows_SDL2TK;
  */
 typedef struct{
   int size_min;
-  ///< minimum size of the text of the entry
+  /**< minimum size of the text of the entry*/
   int size_max;
-  ///< maximum size of the text of the entry
+  /**< maximum size of the text of the entry*/
   int size;
-  ///< actual size of the text of the entry
-  /* vaut 1 si l'Entry est selectionnee, 0 sinon */
+  /**< actual size of the text of the entry*/
   int isSelect;
-  ///< tells whether or not the Entry is selected (1 for yes, 0 for no)
+  /**< tells whether or not the Entry is selected (1 for yes, 0 for no)*/
   int isScripted;
-  ///< tells whether or not the Entry is crypted (1 for yes, 0 for no)
+  /**< tells whether or not the Entry is crypted (1 for yes, 0 for no)*/
 }EntrySDL2;
 
 struct ListPtrElementSDL2;
@@ -43,52 +44,63 @@ struct ListPtrElementSDL2;
  */
 typedef struct ElementSDL2{
   float x;
-  ///< abscissa coordinate of the top left of the element
+  /**< abscissa coordinate of the top left of the element*/
   float y;
-  ///< ordinate coordinate of the top left of the element
+  /**< ordinate coordinate of the top left of the element*/
   float width;
-  ///< width of the element
+  /**< width of the element*/
   float height;
-  ///< height of the element
+  /**< height of the element*/
   float prX;
-  ///< abscissa coordinate of the rotation point (if from 0 to 1, in the element)
+  /**< abscissa coordinate of the rotation point (if from 0 to 1, in the element)*/
   float prY;
-  ///< ordinate coordinate of the rotation point (if from 0 to 1, in the element)
+  /**< ordinate coordinate of the rotation point (if from 0 to 1, in the element)*/
   float rotation;
-  ///< rotation angle of the element
+  /**< rotation angle of the element*/
   float rotSpeed;
-  ///< speed rotation (degree / update) of the element
-  /* couleurs du texte et du block (la premiere case vaut -1 si la partie a colorie n'est pas dans l'element) */
+  /**< speed rotation (degree / update) of the element*/
   int coulBlock[4];
-  ///< color of the block of the element (if first value -1, there is no block)
+  /**< color of the block of the element (if first value -1, there is no block)*/
   float textSize;
-  ///< text proportion in the block
+  /**< text proportion in the block*/
   ListDisplayCode *codes;
-  ///< list of display code of the element
+  /**< list of display code of the element*/
   void (*action)(struct ElementSDL2*);
-  ///< function called when update
+  /**< function called when update*/
   void (*onClick)(struct ElementSDL2*);
-  ///< function called when the element is clicked
+  /**< function called when the element is clicked*/
   void (*unClick)(struct ElementSDL2*);
-  ///< function called when the element is unclicked
+  /**< function called when the element is unclicked*/
   void (*keyPress)(struct ElementSDL2*,SDL_Keycode c);
-  ///< function called when a key is pressed
+  /**< function called when a key is pressed*/
   void (*keyReleased)(struct ElementSDL2*,SDL_Keycode c);
-  ///< function called when a key is released
+  /**< function called when a key is released*/
+  void (*unSelect)(struct ElementSDL2*);
+  /**< function called when the element is unselected*/
+  void (*endSprite)(struct ElementSDL2*,int code);
+  /**< function called at the end of a sprite*/
   SDL_Texture *image;
-  ///< texture of the image (NULL if no image)
+  /**< texture of the image (NULL if no image)*/
+  ListAnimation* animation;
+  /**< animation of the image*/
   FontSDL2 *police;
-  ///< informations about the text (NULL if no text)
+  /**< informations about the text (NULL if no text)*/
   EntrySDL2 *entry;
-  ///< informations about the entry (NULL if no entry)
+  /**< informations about the entry (NULL if no entry)*/
   struct ListPtrElementSDL2 *interactions;
-  ///< list of elements that this element can modifie
+  /**< list of elements that this element can modifie*/
   ListHitBox * hitboxes;
-  ///< list of clickable zones
+  /**< list of clickable zones*/
   void * data;
-  ///< data available for the user
+  /**< data available for the user*/
   int delete;
-  ///< tells whether or not the element should be deleted
+  /**< tells whether or not the element should be deleted (1 for completely deleted, 2 for display remove, 3 for plan change)*/
+  int deleteCode;
+  /**< plan or display code to be removed from*/
+  int selected;
+  /**< tells whether or not the element is selected*/
+  WindowSDL2 * parent;
+  /**< parent window of the element */
 }ElementSDL2;
 
 /**
@@ -97,9 +109,9 @@ typedef struct ElementSDL2{
  */
 typedef struct PtrElement{
   ElementSDL2 *element;
-  ///< pointer of the element
+  /**< pointer of the element*/
   struct PtrElement *next;
-  ///< next PtrElement in the list
+  /**< next PtrElement in the list*/
 }PtrElementSDL2;
 
 /**
@@ -108,15 +120,15 @@ typedef struct PtrElement{
  */
 typedef struct ListPtrElementSDL2{
   PtrElementSDL2 *first;
-  ///< first PtrElementSDL2 of the list
+  /**< first PtrElementSDL2 of the list*/
   PtrElementSDL2 *last;
-  ///< last PtrElementSDL2 of the list
+  /**< last PtrElementSDL2 of the list*/
   PtrElementSDL2 *current;
-  ///< current PtrElementSDL2 of the list (used for iterator)
+  /**< current PtrElementSDL2 of the list (used for iterator)*/
   struct ListPtrElementSDL2 * next;
-  ///< next List of PtrElementSDL2
+  /**< next List of PtrElementSDL2*/
   int code;
-  ///< plan of the list
+  /**< plan of the list*/
 }ListPtrElementSDL2;
 
 /**
@@ -125,13 +137,13 @@ typedef struct ListPtrElementSDL2{
  */
 typedef struct ListDCElementSDL2{
   ListPtrElementSDL2 * first;
-  ///< first list (plan) of element
+  /**< first list (plan) of element*/
   ListPtrElementSDL2 * current;
-  ///< current list (plan) of element (used for iterator)
+  /**< current list (plan) of element (used for iterator)*/
   struct ListDCElementSDL2 * next;
-  ///< next list (display code) of list (plan) of element
+  /**< next list (display code) of list (plan) of element*/
   int code;
-  ///< display code of this list
+  /**< display code of this list*/
 }ListDCElementSDL2;
 
 /**
@@ -140,11 +152,11 @@ typedef struct ListDCElementSDL2{
  */
 typedef struct ListElementSDL2{
   ListDCElementSDL2 *first;
-  ///< first list (display code) of list (plan) of elements
+  /**< first list (display code) of list (plan) of elements*/
   ListDCElementSDL2 * currentDCIterator;
-  ///< current list (display code) of list (plan) of elements (used for iterator)
+  /**< current list (display code) of list (plan) of elements (used for iterator)*/
   ListPtrElementSDL2 *currentPIterator;
-  ///< current list (plan) of elements (used for iterator)
+  /**< current list (plan) of elements (used for iterator)*/
 }ListElementSDL2;
 
 
@@ -407,6 +419,13 @@ int getRotationSpeedElementSDL2(ElementSDL2* e,float* s);
  * @return the data of the element
  */
 void * getDataElementSDL2(ElementSDL2* e);
+/**
+ * @brief tells whether or not the element is selected
+ * @param e : element to get the information from
+ * @param select : where to store the information
+ * @return 1 if there was an error, 0 if not
+ */
+int isSelectedElementSDL2(ElementSDL2 *e, int * select);
 /* ------------------------------------------------------- */
 
 
@@ -442,8 +461,16 @@ void setTextColorElementSDL2(ElementSDL2 *e, int color[4]);
  * @brief set the element's image
  * @param e : element to be modified
  * @param image : path of the new image
+ * @return 0 if it failed, 1 if it succeeded
  */
 int setImageElementSDL2(ElementSDL2 *e,char *image);
+/**
+ * @brief set the element's image with a SDL2's texture
+ * @param e : element to be modified
+ * @param image : texture of the new image
+ * @return 0 if it failed, 1 if it succeeded
+ */
+int setImageTextureElementSDL2(ElementSDL2 *e,SDL_Texture * image);
 /**
  * @brief set the element's coordinates
  * @param e : element to be modified
@@ -529,6 +556,18 @@ void setOnClickElementSDL2(ElementSDL2 *e,void (*onCLick)(ElementSDL2*));
  */
 void setUnClickElementSDL2(ElementSDL2 *e,void (*unCLick)(ElementSDL2*));
 /**
+ * @brief set the behaiour of an element when it is unselect
+ * @param e : element to be modified
+ * @param unSelect : new behaviour
+ */
+void setUnSelectElementSDL2(ElementSDL2 *e,void (*unSelect)(ElementSDL2*));
+/**
+ * @brief set the behaiour of an element when it ends a sprite
+ * @param e : element to be modified
+ * @param endSprite : new behaviour
+ */
+void setEndSpriteElementSDL2(ElementSDL2 *e,void (*endSprite)(ElementSDL2*,int));
+/**
  * @brief add an element to another so that this other can modifie the first one
  * @param e : element to be modified
  * @param add : element to be add
@@ -584,6 +623,90 @@ void setRotationPointElementSDL2(ElementSDL2 *e,float x,float y);
  * @param data : new data of the element
  */
 void setDataElementSDL2(ElementSDL2 *e,void *data);
+/**
+ * @brief add an empty animation to the element
+ * @param e : element
+ * @param code : code of the new animation
+ * @return 0 if the animation could be added, 1 if not
+ */
+int createAnimationElementSDL2(ElementSDL2 *e,int code);
+/**
+ * @brief remove an empty animation from the list
+ * @param l : list of animation
+ * @param code : code of the animation to be removed
+ * @return 0 if the animation could be removed, 1 if not
+ */
+int removeAnimationElementSDL2(ElementSDL2 *e,int code);
+/**
+ * @brief add a Sprite to the element
+ * @param e : element
+ * @param x : abscissa coordinate of the top left corner of the sprite in its image
+ * @param y : ordinate coordinate of the top left corner of the sprite in its image
+ * @param width : width of the sprite in its image
+ * @param height : height of the sprite in its image
+ * @param lifespan : number of time the sprite should be displaied before going to the next sprite
+ * @return 0 if the sprite was correctly added, 1 if not
+ */
+int addSpriteAnimationElementSDL2(ElementSDL2 *e,int code,int x,int y,int width,int height,int lifespan);
+/**
+ * @brief remove a Sprite in the element
+ * @param e : element
+ * @param x : abscissa coordinate of the top left corner of the sprite in its image
+ * @param y : ordinate coordinate of the top left corner of the sprite in its image
+ * @param width : width of the sprite in its image
+ * @param height : height of the sprite in its image
+ * @return 0 if the sprite was correctly removed, 1 if not
+ */
+int removeSpriteAnimationElementSDL2(ElementSDL2 *e,int code,int x,int y,int width,int height);
+/**
+ * @brief set the lifespan of a sprite
+ * @param e : element
+ * @param x : abscissa coordinate of the top left corner of the sprite in its image
+ * @param y : ordinate coordinate of the top left corner of the sprite in its image
+ * @param width : width of the sprite in its image
+ * @param height : height of the sprite in its image
+ * @param lifespan : new number of time the sprite should be displaied before going to the next sprite
+ * @return 0 if the lifespan could be set, 1 if not
+ */
+int setLifeSpanSpriteAnimationElementSDL2(ElementSDL2 * e,int code,int x,int y,int width,int height,unsigned lifespan);
+/**
+ * @brief go to te next sprite of the current animation of an element
+ * @param e : element
+ * @return 0 if it was possible, 1 if not
+ */
+int nextSpriteElementSDL2(ElementSDL2 * e);
+/**
+ * @brief go to the previous sprite of the current animation of an element
+ * @param e : element
+ * @return 0 if it was possible, 1 if not
+ */
+int previousSpriteElementSDL2(ElementSDL2 * e);
+/**
+ * @brief set the way to go from a sprite to another (forward (1), backward (-1), no move (0))
+ * @param e : element
+ * @param sens : new way
+ * @return 0 if the way could be set, 1 if not
+ */
+int setWaySpriteAnimationElementSDL2(ElementSDL2 * e,int code, int sens);
+/**
+ * @brief go to te next animation of an element
+ * @param e : element
+ * @return 0 if it was possible, 1 if not
+ */
+int nextAnimationElementSDL2(ElementSDL2 * e);
+/**
+ * @brief go to the previous animation of an element
+ * @param e : element
+ * @return 0 if it was possible, 1 if not
+ */
+int previousAnimationElementSDL2(ElementSDL2 * e);
+/**
+ * @brief set the animation of an element
+ * @param e : element to be modifid
+ * @param code : code of the animation to set
+ * @return 0 if the animation is set, 1 if not
+ */
+int setAnimationElementSDL2(ElementSDL2 *e,int code);
 /* ------------------------------------------------------- */
 
 

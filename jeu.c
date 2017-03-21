@@ -11,6 +11,7 @@ void gravite(ElementSDL2 *this){
   static int diff = 10;
   /* variables non static */
   ElementSDL2 * courant = NULL;
+  ElementSDL2 * compteur = NULL;
   ElementSDL2 * tmp = NULL;
   int           noir[4] = {0,0,0,0};
   int           bleu[4] = {0,0,255,0};
@@ -19,19 +20,19 @@ void gravite(ElementSDL2 *this){
   int           blanc[4] = {255,255,255,0};
   int           collision = 0;
   int           height = 0;
+  int         * tab;
   float         y = 0;
   
   initIterateurElementSDL2(this);
-  courant = nextIterateurElementSDL2(this);
-  getDimensionFenetreSDL2(NULL,&height);
+  compteur = nextIterateurElementSDL2(this);
+  getDimensionWindowSDL2(NULL,&height);
   getCoordElementSDL2(this,NULL,&y);
-  //printf("%f\n",height-y);
 
   if(((Data*)(getDataElementSDL2(this)))->left==2){
     setActionElementSDL2(this,NULL);
     setKeyPressElementSDL2(this,NULL);
     setKeyReleasedElementSDL2(this,NULL);
-    changeDisplayFenetreSDL2(0);
+    changeDisplayWindowSDL2(0);
     dpy = -SPEED_MAX;
     score = 0.f;
     lastGenY = 0.f;
@@ -48,10 +49,15 @@ void gravite(ElementSDL2 *this){
     lastGenY = 0.f;
     diff = 10;
   }else{
+    tab=(int*)getDataElementSDL2(compteur);
+    courant=nextIterateurElementSDL2(this);
     while(courant){
       /* verifie qu'il y a collision avec l'element courant */
       if(dpy>0 && courant->x+courant->width>=this->x && courant->x<=this->x+this->width && courant->y<=this->y+this->height && courant->y+courant->height>=this->y+this->height){
 	tmp=nextIterateurElementSDL2(this);
+	if(tab){
+	  tab[*((int *)(courant->data))]++;
+	}
 	switch(*((int *)(courant->data))){
 	case 3 :
 	  collision = 2;
@@ -136,18 +142,20 @@ void gravite(ElementSDL2 *this){
 }
 
 void deplacement(ElementSDL2 *this, SDL_Keycode c){
-  if(c=='O'){ /* fleche droite */
+  if(c=='O'|| c=='^'){ /* fleche droite */
     ((Data *)(this->data))->right = 1;
-  }else if(c=='P'){ /* fleche gauche */
+  }else if(c=='P' || c=='\\'){ /* fleche gauche */
     ((Data *)(this->data))->left = 1;
   }else if(c==SDLK_ESCAPE){
     ((Data *)(this->data))->left = 2;
+  }else{
+    printf("%c\n",c);
   }
 }
 void stop(ElementSDL2 *this, SDL_Keycode c){
-  if(c=='O'){
+  if(c=='O'|| c=='^'){
     ((Data *)(this->data))->right=0;
-  }else if(c=='P'){
+  }else if(c=='P' || c=='\\'){
     ((Data *)(this->data))->left=0;
   }
 }
@@ -160,7 +168,7 @@ void initGame(ElementSDL2 *personnage, int couleur[4]){
 
   actualiseScore(NULL);
 
-  getDimensionFenetreSDL2(&w,NULL);
+  getDimensionWindowSDL2(&w,NULL);
 
   replaceElementSDL2(personnage,180.f,510.f);
   d=(Data*)(getDataElementSDL2(personnage));
@@ -173,7 +181,7 @@ void initGame(ElementSDL2 *personnage, int couleur[4]){
   setKeyReleasedElementSDL2(personnage,stop);
 
   initIterateurElementSDL2(personnage);
-
+  nextIterateurElementSDL2(personnage);
   obstacle=nextIterateurElementSDL2(personnage);
   while(obstacle){
     tmp=nextIterateurElementSDL2(personnage);
@@ -201,7 +209,7 @@ void genereObstacle(ElementSDL2 *personnage,int couleur[4],int brick){
   ElementSDL2 * obstacle;
   int * i = malloc(sizeof(*i)), w = 0;
 
-  getDimensionFenetreSDL2(&w,NULL);
+  getDimensionWindowSDL2(&w,NULL);
   *i=brick;
   obstacle = createBlock((float)rand()/RAND_MAX*(w-WIDTH_OBSTACLE),10,WIDTH_OBSTACLE,HEIGHT_OBSTACLE,couleur,1,2);
   setDataElementSDL2(obstacle,i);
@@ -232,8 +240,9 @@ void actualiseScore(ElementSDL2 * this){
       while(s[i]){
 	++i;
       }
-      if(i<99){
+      while(i<24){
 	s[i]=' ';
+	i++;
       }
       setTextElementSDL2(this,s);
     }
@@ -246,12 +255,53 @@ void endGame(ElementSDL2 * this, SDL_Keycode c){
   switch(c){
   case SDLK_ESCAPE:
     removeElementSDL2(this);
-    changeDisplayFenetreSDL2(0);
+    changeDisplayWindowSDL2(0);
     break;
   case SDLK_SPACE:
     initIterateurElementSDL2(this);
     initGame(nextIterateurElementSDL2(this),noir);
     removeElementSDL2(this);
     break;
+  }
+}
+
+void actualiseCompteur(ElementSDL2 *this){
+  static int count[4]={0,0,0,0};
+  char s[]="      ";
+  int * vals;
+  int * id;
+  int i,j,v;
+  ElementSDL2 * e;
+
+  if(this){
+    if(initIterateurElementSDL2(this)){
+      e = nextIterateurElementSDL2(this);
+      if(e){
+	vals = (int*)getDataElementSDL2(e);
+	id = (int *)getDataElementSDL2(this);
+	if(vals && id){
+	  if(vals[*id] > count[*id]){
+	    v=count[*id];
+	    j=0;
+	    while(v!=0){
+	      j++;
+	      v/=10;
+	    }
+	    count[*id]=vals[*id];
+	    sprintf(s,"%d",vals[*id]);
+	    i=0;
+	    while(s[i]){
+	      ++i;
+	    }
+	    moveElementSDL2(this,-(i-j)*5.f,0.f);
+	    while(i<6){
+	      s[i]=' ';
+	      i++;
+	    }
+	    setTextElementSDL2(this,s);
+	  }
+	}
+      }
+    }
   }
 }

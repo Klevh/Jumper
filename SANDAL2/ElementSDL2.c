@@ -148,8 +148,7 @@ void removeListPtrElementSDL2(ListDCElementSDL2* l,ListPtrElementSDL2 *lp){
 }
 
 void removeDCElementSDL2(ListDCElementSDL2** l,ElementSDL2 *e){
-  ListDCElementSDL2 *ltmp;
-  ListPtrElementSDL2 **lp, *ptmp;
+  ListPtrElementSDL2 **lp;
   PtrElementSDL2 **pe, *etmp, **pte;
   
   if(e && l){
@@ -258,65 +257,87 @@ int addElementSDL2(ElementSDL2* e){
       addPtrElementSDL2(*lp,e);
       d=d->next;
     }
+    e->parent=_windows_SDL2TK->current;
   }
 
   return error;
 }
 
 void cleanElementSDL2(){
-  FenetreSDL2 *curr;
   PtrElementSDL2 **e, *etmp;
   ListPtrElementSDL2 **lp, *ptmp;
   ListDCElementSDL2 **ldc, *dctmp;
   ElementSDL2 *ee;
   
-  if(_windows_SDL2TK){
-    curr = _windows_SDL2TK->first;
-    while(curr){
-      ldc=&(curr->liste->first);
-      while(*ldc){
-	lp=&((*ldc)->first);
-	while(*lp){
-	  e=&((*lp)->first);
-	  while(*e){
-	    if((*e)->element->delete){
-	      ee=(*e)->element;
-	      removeDCElementSDL2(ldc,ee);
-	      freeElementSDL2(ee);
+  if(_windows_SDL2TK && _windows_SDL2TK->current){
+    ldc=&(_windows_SDL2TK->current->liste->first);
+    while(*ldc && _windows_SDL2TK->current->toDelete){
+      lp=&((*ldc)->first);
+      while(*lp && _windows_SDL2TK->current->toDelete){
+	e=&((*lp)->first);
+	while(*e && _windows_SDL2TK->current->toDelete){
+	  switch((*e)->element->delete-((*e)->element->delete==2 && (*e)->element->codes->size==1)){
+	  case 1:
+	    ee=(*e)->element;
+	    removeDCElementSDL2(ldc,ee);
+	    _windows_SDL2TK->current->toDelete-=(ee->codes?ee->codes->size:1);
+	    freeElementSDL2(ee);
+	    break;
+	  case 2:
+	    if((*ldc)->code==(*e)->element->deleteCode){
+	      etmp=*e;
+	      (*e)->element->codes->size--;
+	      *e=(*e)->next;
+	      free(etmp);
+	      _windows_SDL2TK->current->toDelete--;
 	    }else{
 	      e=&((*e)->next);
 	    }
-	  }
-	  if(!(*lp)->first){
-	    ptmp=(*lp)->next;
-	    if(*lp == curr->liste->currentPIterator){
-	      curr->liste->currentPIterator = ptmp;
+	    break;
+	  case 3:
+	    if((*lp)->code==(*e)->element->deleteCode){
+	      etmp=*e;
+	      *e=(*e)->next;
+	      free(etmp);
+	      _windows_SDL2TK->current->toDelete--;
+	    }else{
+	      e=&((*e)->next);
 	    }
-	    free(*lp);
-	    *lp=ptmp;
-	  }else{
-	    lp=&((*lp)->next);
+	    break;
+	  default:
+	    e=&((*e)->next);
 	  }
 	}
-	if(!(*ldc)->first){
-	  dctmp=(*ldc)->next;
-	  if(*ldc == curr->liste->currentDCIterator){
-	    curr->liste->currentDCIterator = dctmp;
+	if(!(*lp)->first){
+	  ptmp=(*lp)->next;
+	  if(*lp == _windows_SDL2TK->current->liste->currentPIterator){
+	    _windows_SDL2TK->current->liste->currentPIterator = ptmp;
 	  }
-	  free(*ldc);
-	  *ldc=dctmp;
+	  free(*lp);
+	  *lp=ptmp;
 	}else{
-	  ldc=&((*ldc)->next);
+	  lp=&((*lp)->next);
 	}
       }
-      curr=curr->next;
+      if(!(*ldc)->first){
+	dctmp=(*ldc)->next;
+	if(*ldc == _windows_SDL2TK->current->liste->currentDCIterator){
+	  _windows_SDL2TK->current->liste->currentDCIterator = dctmp;
+	}
+	free(*ldc);
+	*ldc=dctmp;
+      }else{
+	ldc=&((*ldc)->next);
+      }
     }
+    _windows_SDL2TK->current->toDelete=0;
   }
 }
 
 void removeElementSDL2(ElementSDL2 *e){
-  if(e){
+  if(e && _windows_SDL2TK && _windows_SDL2TK->current){
     e->delete=1;
+    e->parent->toDelete++;
   }
 }
 /* ------------------------------------------------------- */
@@ -328,7 +349,9 @@ void removeElementSDL2(ElementSDL2 *e){
  */
 void freeElementSDL2(ElementSDL2 *e){
   if(e){
-    freeListDisplayCode(e->codes);
+    if(e->codes){
+      freeListDisplayCode(e->codes);
+    }
     if(e->image){
       SDL_DestroyTexture(e->image);
     }
@@ -347,6 +370,9 @@ void freeElementSDL2(ElementSDL2 *e){
     if(e->hitboxes){
       freeListHitBox(e->hitboxes);
     }
+    if(e->animation){
+      freeListAnimation(e->animation);
+    }
     free(e);
   }    
 }
@@ -358,6 +384,8 @@ ElementSDL2* createBlock(float x,float y,float width,float height,int couleur[4]
     e=malloc(sizeof(*e));
     if(e){
       e->delete=0;
+      e->deleteCode=0;
+      e->selected=0;
       e->x=x;
       e->y=y;
       e->width=width;
@@ -369,11 +397,14 @@ ElementSDL2* createBlock(float x,float y,float width,float height,int couleur[4]
       copyColor(e->coulBlock,couleur);
       e->codes=initListDisplayCode();
       addDisplayCode(e->codes,displayCode,1,plan);
+      e->animation=initListAnimation();
       e->action=NULL;
       e->onClick=NULL;
       e->unClick=NULL;
       e->keyPress=NULL;
       e->keyReleased=NULL;
+      e->unSelect=NULL;
+      e->endSprite=NULL;
       e->police=NULL;
       e->entry=NULL;
       e->interactions=NULL;
@@ -398,6 +429,8 @@ ElementSDL2* createTexte(float x,float y,float width,float height,char * font,ch
     e=malloc(sizeof(*e));
     if(e){
       e->delete=0;
+      e->deleteCode=0;
+      e->selected=0;
       e->x=x;
       e->y=y;
       e->width=width;
@@ -407,6 +440,7 @@ ElementSDL2* createTexte(float x,float y,float width,float height,char * font,ch
       e->rotation=0.f;
       e->rotSpeed=0.f;
       e->textSize=1.0f;
+      e->animation=initListAnimation();
       e->image=NULL;
       e->entry=NULL;
       e->interactions=NULL;
@@ -423,6 +457,8 @@ ElementSDL2* createTexte(float x,float y,float width,float height,char * font,ch
 	e->unClick=NULL;
 	e->keyPress=NULL;
 	e->keyReleased=NULL;
+	e->unSelect=NULL;
+	e->endSprite=NULL;
 	e->data=NULL;
 	if(addElementSDL2(e)){
 	  freeElementSDL2(e);
@@ -449,6 +485,8 @@ ElementSDL2* createImage(float x,float y,float width,float height,char *image,in
       e=malloc(sizeof(*e));
       if(e){
 	e->delete=0;
+	e->deleteCode=0;
+	e->selected=0;
 	e->x=x;
 	e->y=y;
 	e->width=width;
@@ -457,6 +495,7 @@ ElementSDL2* createImage(float x,float y,float width,float height,char *image,in
 	e->prY=.5f;
 	e->rotation=0.f;
 	e->rotSpeed=0.f;
+	e->animation=initListAnimation();
 	e->image=SDL_CreateTextureFromSurface(_windows_SDL2TK->current->renderer,s);
 	e->codes=initListDisplayCode();
 	addDisplayCode(e->codes,displayCode,1,plan);
@@ -466,6 +505,8 @@ ElementSDL2* createImage(float x,float y,float width,float height,char *image,in
 	e->unClick=NULL;
 	e->keyPress=NULL;
 	e->keyReleased=NULL;
+	e->unSelect=NULL;
+	e->endSprite=NULL;
 	e->police=NULL;
 	e->entry=NULL;
 	e->interactions=NULL;
@@ -662,7 +703,7 @@ int getDimensionElementSDL2(ElementSDL2* e,int* w,int * h){
     error=0;
   }
 
-  return 0;
+  return error;
 }
 
 int getRotationPointElementSDL2(ElementSDL2* e,float *x,float *y){
@@ -702,6 +743,19 @@ void * getDataElementSDL2(ElementSDL2* e){
   }
 
   return res;
+}
+
+int isSelectedElementSDL2(ElementSDL2 *e, int * select){
+  int error = 1;
+
+  if(e){
+    error = 0;
+    if(select){
+      *select = e->selected;
+    }
+  }
+
+  return error;
 }
 /* ------------------------------------------------------- */
 
@@ -771,6 +825,17 @@ int setImageElementSDL2(ElementSDL2 *e,char *image){
   return changed;
 }
 
+int setImageTextureElementSDL2(ElementSDL2 *e,SDL_Texture * image){
+  int changed = 0;
+
+  if(e){
+    changed = 1;
+    e->image=image;
+  }
+
+  return changed;
+}
+
 void replaceElementSDL2(ElementSDL2 *e,float x,float y){
   if(e && _windows_SDL2TK && _windows_SDL2TK->current){
     e->x=x;
@@ -799,11 +864,10 @@ void setTextSize(ElementSDL2 *e,float textSize){
 }
 
 void addDisplayCodeElementSDL2(ElementSDL2 *e,int displayCode, int plan){
-  int suppr = 0, was;
   DisplayCode **d, *tmp;
   ListDCElementSDL2 **ldc, *dctmp;
-  ListPtrElementSDL2 **lp, *ptmp,**lpDel = NULL;
-  PtrElementSDL2 **cour, *el;
+  ListPtrElementSDL2 **lp, *ptmp;
+  PtrElementSDL2 *el;
 
   if(_windows_SDL2TK && _windows_SDL2TK->current && _windows_SDL2TK->current->liste && e && e->codes){
     d=&(e->codes->first);
@@ -812,8 +876,6 @@ void addDisplayCodeElementSDL2(ElementSDL2 *e,int displayCode, int plan){
     }
     if(!(*d && (*d)->code==displayCode && (*d)->plan==plan)){ 
       if(*d && (*d)->code == displayCode){
-	suppr=1;
-	was = (*d)->plan;
 	(*d)->plan=plan;
       }else{
 	tmp=malloc(sizeof(*tmp));
@@ -821,55 +883,33 @@ void addDisplayCodeElementSDL2(ElementSDL2 *e,int displayCode, int plan){
 	tmp->plan = plan;
 	tmp->next=*d;
 	*d=tmp;
-      }
-      ldc=&(_windows_SDL2TK->current->liste->first);
-      while(*ldc && (*ldc)->code < displayCode){
-	ldc=&((*ldc)->next);
-      }
-      if(!*ldc || (*ldc)->code != displayCode){
-	dctmp=initListDCElementSDL2(displayCode);
-	dctmp->next=*ldc;
-	*ldc=dctmp;
-      }
-      lp=&((*ldc)->first);
-      while(*lp && (*lp)->code > plan){
-	if(suppr && (*lp)->code == was){
-	  lpDel=lp;
+	ldc=&(_windows_SDL2TK->current->liste->first);
+	while(*ldc && (*ldc)->code < displayCode){
+	  ldc=&((*ldc)->next);
 	}
-	lp=&((*lp)->next);
-      }
-      if((!*lp || (*lp)->code != plan)){
-	ptmp=initListPtrElementSDL2(plan);
-	ptmp->next=*lp;
-	*lp=ptmp;
-      }
-      el=malloc(sizeof(*el));
-      el->next=NULL;
-      el->element=e;
-      if((*lp)->last){
-	(*lp)->last->next=el;
-      }else{
-	(*lp)->first=el;
-      }
-      (*lp)->last=el;
-      if(suppr){
-	if(!lpDel){
-	  lpDel=lp;
-	  while(*lpDel && (*lpDel)->code > plan){
-	    lpDel=&((*lpDel)->next);
-	  }
+	if(!*ldc || (*ldc)->code != displayCode){
+	  dctmp=initListDCElementSDL2(displayCode);
+	  dctmp->next=*ldc;
+	  *ldc=dctmp;
 	}
-	if(*lpDel){
-	  cour=&((*lp)->first);
-	  while(*cour && (*cour)->element!=e){
-	    cour=&((*cour)->next);
-	  }
-	  if(*cour && (*cour)->element==e){
-	    el=(*cour)->next;
-	    free(*cour);
-	    *cour=el;
-	  }
+	lp=&((*ldc)->first);
+	while(*lp && (*lp)->code > plan){
+	  lp=&((*lp)->next);
 	}
+	if((!*lp || (*lp)->code != plan)){
+	  ptmp=initListPtrElementSDL2(plan);
+	  ptmp->next=*lp;
+	  *lp=ptmp;
+	}
+	el=malloc(sizeof(*el));
+	el->next=NULL;
+	el->element=e;
+	if((*lp)->last){
+	  (*lp)->last->next=el;
+	}else{
+	  (*lp)->first=el;
+	}
+	(*lp)->last=el;
       }
     }
   }
@@ -877,9 +917,9 @@ void addDisplayCodeElementSDL2(ElementSDL2 *e,int displayCode, int plan){
 
 void removeDisplayCodeElementSDL2(ElementSDL2 *e,int displayCode){
   DisplayCode **d, *tmp;
-  ListDCElementSDL2 **ldc, *dctmp;
-  ListPtrElementSDL2 **lp, *ptmp;
-  PtrElementSDL2 **cour, *etmp;
+  ListDCElementSDL2 **ldc;
+  ListPtrElementSDL2 **lp;
+  PtrElementSDL2 **cour;
 
   if(_windows_SDL2TK && _windows_SDL2TK->current && _windows_SDL2TK->current->liste && e && e->codes){
     d=&(e->codes->first);
@@ -901,19 +941,16 @@ void removeDisplayCodeElementSDL2(ElementSDL2 *e,int displayCode){
 	  while(*cour && (*cour)->element!=e){
 	    cour=&((*cour)->next);
 	  }
-	  if(*cour && (*cour)->element){
-	    etmp=(*cour)->next;
-	    free(*cour);
-	    *cour=etmp;
+	  if(*cour){
+	    (*cour)->element->delete=2;
+	    (*cour)->element->deleteCode=displayCode;
+	    _windows_SDL2TK->current->toDelete++;
 	  }
 	}
       }
       tmp=(*d)->next;
       free(*d);
       *d=tmp;
-      if(!e->codes->first){
-	freeElementSDL2(e);
-      }
     }
   }
 }
@@ -933,7 +970,7 @@ void setDisplayElementSDL2(ElementSDL2 *e,int displayCode,int isDisplaied){
 }
 
 void setPlanElementSDL2(ElementSDL2 *e,int displayCode,int plan){
-  int found = 0, old;
+  int old;
   DisplayCode *d;
   ListDCElementSDL2 *ldc;
   ListPtrElementSDL2 **lp, *ptmp, **lpNew = NULL;
@@ -963,10 +1000,10 @@ void setPlanElementSDL2(ElementSDL2 *e,int displayCode,int plan){
 	while(*cour && (*cour)->element!=e){
 	  cour=&((*cour)->next);
 	}
-	if(*cour && (*cour)->element==e){
-	  tmp=(*cour)->next;
-	  free(*cour);
-	  *cour=tmp;
+	if(*cour){
+	  (*cour)->element->delete=3;
+	  (*cour)->element->deleteCode=old;
+	  _windows_SDL2TK->current->toDelete++;
 	}
 	if(!lpNew){
 	  lpNew=lp;
@@ -1018,6 +1055,18 @@ void setOnClickElementSDL2(ElementSDL2 *e,void (*onCLick)(ElementSDL2*)){
   }
 }
 
+void setUnSelectElementSDL2(ElementSDL2 *e,void (*unSelect)(ElementSDL2*)){
+  if(e){
+    e->unSelect=unSelect;
+  }
+}
+
+void setEndSpriteElementSDL2(ElementSDL2 *e,void (*endSprite)(ElementSDL2*,int)){
+  if(e){
+    e->endSprite=endSprite;
+  }
+}
+
 void addElementToElementSDL2(ElementSDL2 *e,ElementSDL2 *add){
   PtrElementSDL2 *pe;
   if(e && add){
@@ -1043,7 +1092,7 @@ void addElementToElementSDL2(ElementSDL2 *e,ElementSDL2 *add){
 }
 
 void delElementToElementSDL2(ElementSDL2 *e,ElementSDL2 *del){
-  PtrElementSDL2 **pe, **tmp = NULL, *rm, *rmtmp;
+  PtrElementSDL2 **pe, *rm, **tmp=NULL;
 
   if(e && e->interactions && del){
     pe=&(e->interactions->first);
@@ -1061,7 +1110,11 @@ void delElementToElementSDL2(ElementSDL2 *e,ElementSDL2 *del){
 	e->interactions->current=*pe;
       }
       if(rm == e->interactions->last){
-	e->interactions->last=*pe;
+	if(tmp){
+	  e->interactions->last=*tmp;
+	}else{
+	  e->interactions->last=NULL;
+	}
       }
     }
   }   
@@ -1108,6 +1161,142 @@ void setDataElementSDL2(ElementSDL2 *e,void *data){
   if(e){
     e->data=data;
   }
+}
+
+int createAnimationElementSDL2(ElementSDL2 *e,int code){
+  int error = 1;
+
+  if(e){
+    error=createAnimation(e->animation,code);
+  }
+
+  return error;
+}
+
+int removeAnimationElementSDL2(ElementSDL2 *e,int code){
+  int error = 1;
+
+  if(e){
+    error=removeAnimation(e->animation,code);
+  }
+
+  return error;
+}
+
+int addSpriteAnimationElementSDL2(ElementSDL2 *e,int code,int x,int y,int width,int height,int lifespan){
+  int error = 1;
+
+  if(e){
+    error = addSpriteAnimation(e->animation,code,x,y,width,height,lifespan);
+  }
+  
+  return error;
+}
+
+int removeSpriteAnimationElementSDL2(ElementSDL2 *e,int code,int x,int y,int width,int height){
+  int error = 1;
+
+  if(e){
+    error = removeSpriteAnimation(e->animation,code,x,y,width,height);
+  }
+
+  return error;
+}
+
+int setLifeSpanSpriteAnimationElementSDL2(ElementSDL2 * e,int code,int x,int y,int width,int height,unsigned lifespan){
+  int error = 1;
+
+  if(e){
+    error = setLifeSpanSpriteAnimation(e->animation,code,x,y,width,height,lifespan);
+  }
+
+  return error;
+}
+
+int nextSpriteElementSDL2(ElementSDL2 * e){
+  int error = 1;
+
+  if(e && e->animation->size && e->animation->current->size){
+    e->animation->current->current = e->animation->current->current->next;
+    e->animation->current->wasChanged=0;
+    error = 0;
+  }
+
+  return error;
+}
+
+int previousSpriteElementSDL2(ElementSDL2 * e){
+  int error = 1;
+
+  if(e && e->animation->size && e->animation->current->size){
+    e->animation->current->current = e->animation->current->current->prev;
+    e->animation->current->wasChanged=0;
+    error = 0;
+  }
+
+  return error;
+}
+
+int setWaySpriteAnimationElementSDL2(ElementSDL2 * e,int code, int sens){
+  int error = 1;
+  ListSprite *ls;
+  unsigned i=0;
+
+  if(e && (sens == 1 || !sens || sens == -1) && e->animation->size){
+    ls=e->animation->first;
+    while(i<e->animation->size && ls->code != code){
+      ls=ls->next;
+      ++i;
+    }
+    if(i<e->animation->size){
+      error = 0;
+      ls->sens=sens;
+    }
+  }
+
+  return error;
+}
+
+int nextAnimationElementSDL2(ElementSDL2 * e){
+  int error=1;
+
+  if(e && e->animation->size){
+    e->animation->current=e->animation->current->next;
+    error = 0;
+  }
+
+  return error;
+}
+
+int previousAnimationElementSDL2(ElementSDL2 * e){
+  int error=1;
+
+  if(e && e->animation->size){
+    e->animation->current=e->animation->current->prev;
+    error = 0;
+  }
+
+  return error;
+}
+
+int setAnimationElementSDL2(ElementSDL2 *e,int code){
+  int error = 1;
+  ListSprite *ls;
+  unsigned i=0;
+
+  if(e && e->animation->size){
+    ls=e->animation->first;
+    while(i<e->animation->size && ls->code != code){
+      ls=ls->next;
+      ++i;
+    }
+    if(i<e->animation->size){
+      e->animation->current=ls;
+      error = 0;
+    }
+  }
+
+  return error;
 }
 /* ------------------------------------------------------- */
 
@@ -1175,7 +1364,6 @@ int initIterateur(int displayCode){
 }
 
 ElementSDL2* nextElementSDL2(){
-  ListPtrElementSDL2 *lp;
   ElementSDL2 *res = NULL;
   PtrElementSDL2 *pres;
 

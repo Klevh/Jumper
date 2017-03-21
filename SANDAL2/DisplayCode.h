@@ -6,7 +6,7 @@
 
 /**
  * @file DisplayCode.h
- * @author Baptiste Prunier
+ * @author Baptiste PRUNIER (KLEVH)
  * @brief Contains display code and list of display codes
  */
 
@@ -16,13 +16,13 @@
  */
 typedef struct DisplayCode{
   struct DisplayCode *next;
-  ///< next DisplayCode
+  /**< next DisplayCode*/
   int code;
-  ///< display code
+  /**< display code*/
   int isDisplaied;
-  ///< flag to tell whether or not the element should be displaied
+  /**< flag to tell whether or not the element should be displaied*/
   int plan;
-  ///< plan linked to the display code
+  /**< plan linked to the display code*/
 }DisplayCode;
 
 /**
@@ -31,7 +31,9 @@ typedef struct DisplayCode{
  */
 typedef struct{
   DisplayCode *first;
-  ///< first element of the list
+  /**< first element of the list*/
+  unsigned size;
+  /**< size of the list*/
 }ListDisplayCode;
 
 /* -------------------------------------------------------
